@@ -1,7 +1,3 @@
-import asyncio
-import datetime
-import threading
-import time
 import uuid
 
 
@@ -18,8 +14,14 @@ class Announcement:
         self.running = False
 
     def __str__(self):
+        minutes = self.sleep / 60
+        hours = minutes / 60
+        days = hours / 24
+
+        frequency = f'{self.sleep} seconds' if minutes < 1 else (f'{minutes} minutes' if hours < 1  else (f'{hours} hours' if days < 1 else f'{days} days' ))
+
         return f'\'**{self.content[0:20]}...**\' requested by {self.requester}. ' \
-               f'Announces on channel **{self.channel}** every **{self.sleep}** seconds, until {self.until.strftime("%d/%m/%Y, %H:%M:%S")}. Id: {self.uuid}. '
+               f'Announces on channel **{self.channel}** every **{frequency}**, until {self.until.strftime("%d/%m/%Y, %H:%M:%S")}. Id: {self.uuid}. '
 
     def id(self):
         return self.uuid

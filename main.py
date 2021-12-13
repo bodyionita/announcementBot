@@ -1,16 +1,12 @@
-import asyncio
-import datetime
-import time
-import uuid
-from threading import Thread
-
 import discord
 from dateutil.parser import parse
+from decouple import config
 
 from announcement import Announcement
 
+
 client = discord.Client()
-token = 'OTE5NTQyNjEyNDI2Mzc5Mjg0.YbXUyw.aZpl5Po1Ax97BwDXGMzhFhxMnQU'
+token = config('discordBotToken')
 
 announcements = {}
 

@@ -23,9 +23,6 @@ class Announcement:
         return f'\'**{self.content[0:20]}...**\' requested by {self.requester}. ' \
                f'Announces on channel **{self.channel}** every **{frequency}**, until {self.until.strftime("%d/%m/%Y, %H:%M:%S")}. Id: {self.uuid}. '
 
-    def id(self):
-        return self.uuid
-
     # def stop(self):
     #     self.running = False
     #     self.thread.stop()

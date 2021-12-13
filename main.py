@@ -3,12 +3,10 @@ from dateutil.parser import parse
 from decouple import config
 
 from announcement import Announcement
-
+from announcements import Announcements
 
 client = discord.Client()
 token = config('discordBotToken')
-
-announcements = {}
 
 SECOND = 1
 MINUTE = 60 * SECOND
@@ -28,6 +26,7 @@ granularityMaping = {
             'm': MONTH,
             'y': YEAR}
 
+announcements = Announcements()
 
 @client.event
 async def on_ready():
@@ -48,10 +47,9 @@ async def on_message(message):
 
         ############################################################################
         if tokens[1].startswith('list'):
-            # List all announcements queued
-            tosend = 'Announcements list\n'
-            for an in announcements.values():
-                tosend = tosend + str(an) + '\n\n'
+            # List all announcements.py queued
+            tosend = '**Announcements list**\n'
+            tosend += str(announcements)
             await channel.send(tosend)
 
         ############################################################################
@@ -72,7 +70,7 @@ async def on_message(message):
                 sleep = calculate_sleep(count, granularity)
                 content = message.reference.resolved.content
                 an = Announcement(content, channel, sleep, untilDate, message.author)
-                announcements[an.uuid] = an
+                announcements.add(an)
 
             except Exception as e:
                 print(e)
@@ -104,4 +102,6 @@ async def error(channel, msg = None):
 
 
 client.run(token)
+
+
 

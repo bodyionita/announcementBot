@@ -55,10 +55,12 @@ async def on_ready():
 
 @tasks.loop(seconds=3)  # task runs every 60 seconds
 async def announcements_loop():
+    global lastEntry
     time_now = datetime.datetime.now()
     seconds_passed = (time_now - lastEntry).total_seconds()
 
     await annManager.update(seconds_passed)
+    lastEntry = time_now
 
 
 @bot.group(description='Main command')

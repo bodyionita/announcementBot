@@ -51,6 +51,8 @@ async def on_ready():
     print('------')
 
 
+
+
 @tasks.loop(seconds=3)  # task runs every 60 seconds
 async def announcements_loop():
     time_now = datetime.datetime.now()
@@ -62,8 +64,41 @@ async def announcements_loop():
 @bot.group(description='Main command')
 async def announce(ctx):
     if ctx.invoked_subcommand is None:
-        await ctx.send(f'No such sub-command exists: **{ctx.subcommand_passed}**')
+        await ctx.reply(f'No such sub-command exists: **{ctx.subcommand_passed}**')
 
+
+@announce.command(description='Respond with help page of Announce commands')
+async def help(ctx):
+    await ctx.reply(f'''
+__Announcement **Bot** Help page__
+
+Use **$announce** followed by the sub-command
+
+**Attention**: any sequence of characters part of commands should be in-between **"  "** if it contains spaces 
+
+Subcommands:
+
+**$announce add <how_many> <granularity> <date_time>** - adds new announcement
+    where: 
+       **<how_many>** - a number representing a multiplier for the granularity
+       **<granularity>** - a sequence of character(s) from the possible ones 
+       *[{' ,'.join(granularityMaping.keys())}]*
+       **<date_time>** - a sequence of characters that define a date (non-us format, so no MM/DD/YYYY format)
+    examples:   
+        $announce add 5 minutes 25Dec2021   
+        $announce add 20 M "25Dec2021 08:59"  
+        $announce add 1 day 25Dec2022 08:59.435"  
+
+**$announce list** - lists current announcements
+    
+**$announce cancel <id>** - cancels an announcement
+    where: 
+        **<id>** - a sequence of characters representing the announcement to cancel
+    examples: 
+        $announce cancel 36d3f852
+        $announce cancel 23c9ce39  
+    
+    ''')
 
 @announce.command(description='List the current announcements queue')
 async def list(ctx):
@@ -81,21 +116,23 @@ async def cancel(ctx, id: str):
 async def add(ctx, how_many: int, granularity: str, date_time: str):
     try:
         untilDate = parse(date_time)
-
     except Exception as e:
         print(e)
         await error(ctx, f'Could not understand the date "{date_time}"')
+        return
 
     try:
         content = ctx.message.reference.resolved.content
     except:
         await error(ctx, f'Did not find the replied message to announce. '
                          f'Make sure you "Reply" the message containing the announcement ')
+        return
 
     try:
         sleep = calculate_sleep(how_many, granularity)
     except:
         await error(ctx, f'The granularity did not match any known ones.')
+        return
 
     try:
         an = Announcement(content, ctx, sleep, untilDate, ctx.message.author)
@@ -103,6 +140,7 @@ async def add(ctx, how_many: int, granularity: str, date_time: str):
     except Exception as e:
         print(e)
         await error(ctx)
+        return
 
 
 def calculate_sleep(count, granularity):

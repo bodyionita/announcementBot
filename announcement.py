@@ -4,10 +4,10 @@ import uuid
 
 class Announcement:
 
-    def __init__(self, content, channel, sleep, until, requester):
+    def __init__(self, content, ctx, sleep, until, requester):
         self.uuid = str(uuid.uuid4())[:8]
         self.content = content
-        self.channel = channel
+        self.ctx = ctx
         self.sleep = sleep
         self.until = until
         self.requester = requester
@@ -22,7 +22,7 @@ class Announcement:
         if self.remaining_seconds <= 0:
             self.remaining_seconds = self.sleep
             if not self.expired:
-                await self.channel.send(self.content)
+                await self.ctx.message.channel.send(self.content)
 
     def __str__(self):
         minutes = self.sleep / 60
@@ -33,5 +33,5 @@ class Announcement:
             f'{minutes} minutes' if hours < 1 else (f'{hours} hours' if days < 1 else f'{days} days'))
 
         return f'"**{self.content[0:20]}...**" requested by {self.requester}. ' \
-               f'Announces on channel **{self.channel}** every **{frequency}**, ' \
+               f'Announces on channel **{self.ctx.message.channel}** every **{frequency}**, ' \
                f'until {self.until.strftime("%d/%m/%Y, %H:%M:%S")}. Id: {self.uuid}. '

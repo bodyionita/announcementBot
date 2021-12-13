@@ -18,5 +18,5 @@ class Announcements:
     def __str__(self):
         strbuild = ''
         for an in self.__announcements.values():
-            strbuild = strbuild + str(an) + '\n\n'
+            strbuild = strbuild + str(an) + '\n'
         return strbuild

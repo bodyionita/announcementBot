@@ -1,7 +1,9 @@
+import discord
+
 from announcement import Announcement
 
 
-class Announcements:
+class AnnouncementsManager:
 
     def __init__(self):
         self.__announcements = {}
@@ -14,6 +16,15 @@ class Announcements:
 
     def remove(self, an: Announcement):
         self.__announcements.pop(an.uuid)
+
+    async def update(self, seconds_passed, client: discord.Client):
+        expired_ids = []
+        for id,an in self.__announcements.items():
+            await an.pass_time(seconds_passed)
+            if an.expired is True:
+                expired_ids.append(id)
+        for id in expired_ids:
+            self.__announcements.pop(id)
 
     def __str__(self):
         strbuild = ''

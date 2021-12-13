@@ -1,17 +1,28 @@
+import datetime
 import uuid
 
 
 class Announcement:
 
     def __init__(self, content, channel, sleep, until, requester):
-        self.thread = None
         self.uuid = str(uuid.uuid4())[:8]
         self.content = content
         self.channel = channel
         self.sleep = sleep
         self.until = until
         self.requester = requester
-        self.running = False
+        self.expired = False
+        self.remaining_seconds = sleep
+
+    async def pass_time(self, seconds):
+        self.remaining_seconds -= seconds
+
+        if datetime.datetime.now() >= self.until:
+            self.expired = True
+        if self.remaining_seconds <= 0:
+            self.remaining_seconds = self.sleep
+            if not self.expired:
+                await self.channel.send(self.content)
 
     def __str__(self):
         minutes = self.sleep / 60

@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 
 from dateutil.parser import parse
 from discord.ext import tasks
@@ -6,7 +7,7 @@ from discord.ext import tasks
 import discord
 
 from announcement import Announcement
-from announcements import Announcements
+from announcements_manager import AnnouncementsManager
 
 SECOND = 1
 MINUTE = 60 * SECOND
@@ -29,7 +30,8 @@ class DiscordClient(discord.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.announcements_loop.start()
-        self.announcements = Announcements()
+        self.annManager = AnnouncementsManager()
+        self.lastEntry = datetime.datetime.now()
 
     async def on_ready(self):
         print('Logged in as')
@@ -39,8 +41,11 @@ class DiscordClient(discord.Client):
 
     @tasks.loop(seconds=3) # task runs every 60 seconds
     async def announcements_loop(self):
-        channel = self.get_channel(0)
-        print('Looped')
+        time_now = datetime.datetime.now()
+        seconds_passed = (time_now - self.lastEntry).total_seconds()
+
+        await self.annManager.update(seconds_passed, self)
+
 
 
     @announcements_loop.before_loop
@@ -63,7 +68,7 @@ class DiscordClient(discord.Client):
             if tokens[1].startswith('list'):
                 # List all announcements.py queued
                 tosend = '**__Announcements list__**\n'
-                tosend += str(self.announcements)
+                tosend += str(self.annManager)
                 await channel.send(tosend)
 
             ############################################################################
@@ -84,7 +89,7 @@ class DiscordClient(discord.Client):
                     sleep = self.calculate_sleep(count, granularity)
                     content = message.reference.resolved.content
                     an = Announcement(content, channel, sleep, untilDate, message.author)
-                    self.announcements.add(an)
+                    self.annManager.add(an)
 
                 except Exception as e:
                     print(e)

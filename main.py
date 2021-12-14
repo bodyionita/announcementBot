@@ -1,5 +1,6 @@
 import os
 import datetime
+from datetime import timedelta
 
 from dateutil.parser import parse
 from decouple import config
@@ -76,23 +77,27 @@ async def cancel(ctx, id: str):
         await annManager.cancel(id, ctx.message)
 
 @announce.command(description='Create a new announcement')
-async def add(ctx, how_many: int, minutes_interval: float):
+async def add(ctx, how_many: int, minutes_interval: float, *, content: str=None):
     allowed = any(x.name == '@everyone' for x in ctx.message.author.roles)
     if not allowed:
         await try_private(ctx, 'You do not have the required role')
     else:
+        final_content = content
         try:
-            content = ctx.message.reference.resolved.content
+            final_content = ctx.message.reference.resolved.content
         except:
-            await error(ctx, f'Did not find the replied message to announce. '
-                             f'Make sure you "Reply" the message containing the announcement ')
-            return
-        sleep = 60 * minutes_interval    
-        if sleep < 30:
+            pass
+            # await error(ctx, f'Did not find the replied message to announce. '
+            #                  f'Make sure you "Reply" the message containing the announcement ')
+            # return  
+        if minutes_interval < 0.5:
             await error(ctx, 'Frequency too low. It should be at least 30 seconds apart.')
             #return
+
+        total_minutes = minutes_interval * how_many
+        until = datetime.datetime.now()+timedelta(minutes=total_minutes)
         try:
-            an = Announcement(content, ctx, sleep, ctx.message.author)
+            an = Announcement(final_content, ctx, minutes_interval*60, how_many, ctx.message.author, until)
             annManager.add(an)
         except Exception as e:
             print(e)

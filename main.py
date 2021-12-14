@@ -37,17 +37,17 @@ __Announcement **Bot** Help page__
 
 Use **$announce** followed by the sub-command
 
-**Attention**: any sequence of characters part of commands should be in-between **"  "** if it contains spaces 
-
 Subcommands:
 
-**$announce add <how_many> <granularity> <date_time>** - adds new announcement
+**$announce add <how_many> <interval_in_minutes>  <content>** - adds new announcement
     where: 
        **<how_many>** - a number representing how many times the announcement should be printed
        **<interval_in_minutes>** - a number representing how often in minutes it should do so
+       **<content> - if it's not a reply you can pass content as part of the command at the end of it
     examples:   
-        $announce add 40 15 - announce 40 times every 15 minutes
-        $announce add 20 3  - announce 20 times every 3 minutes
+        $announce add 40 15 - announce 40 times every 15 minutes the message that you replied to
+        $announce add 20 3  - announce 20 times every 3 minutes  the message that you replied to
+        $announce add 1 3 whatever is important...  - announce 1 time every 3 minutes the message "whatever is important..." 
 
 **$announce list** - lists current announcements
     

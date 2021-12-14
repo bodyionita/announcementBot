@@ -89,7 +89,7 @@ Subcommands:
     examples:   
         $announce add 5 minutes 25Dec2021   
         $announce add 20 M "25Dec2021 08:59"  
-        $announce add 1 day 25Dec2022 08:59.435"  
+        $announce add 1 day "25Dec2022 08:59.435"  
 
 **$announce list** - lists current announcements
     

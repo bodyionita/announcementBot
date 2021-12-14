@@ -6,6 +6,7 @@ from decouple import config
 from discord.ext import tasks
 from discord.ext.commands import Bot
 
+from keep_alive import keep_alive
 from announcement import Announcement
 from announcements_manager import AnnouncementsManager
 
@@ -170,4 +171,5 @@ if __name__ == '__main__':
     token = os.environ['discordBotToken']
     #token = config('discordBotToken')
     announcements_loop.start()
+    keep_alive()
     bot.run(token)

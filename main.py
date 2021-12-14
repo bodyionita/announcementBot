@@ -144,6 +144,8 @@ async def add(ctx, how_many: int, granularity: str, date_time: str):
         await error(ctx)
         return
 
+    await ctx.reply(f'New announcement added to my watchlist. Id {an.uuid}')
+
 
 def calculate_sleep(count, granularity):
     return count * granularityMaping.get(granularity)

@@ -45,6 +45,13 @@ annManager = AnnouncementsManager()
 lastEntry = datetime.datetime.now()
 
 
+async def try_private(ctx, content):
+  try:
+    await ctx.message.author.send(content)
+  except:
+    await ctx.reply('I tried to message you privately but I couldn\'t so now I am printing here. Message:' + content)
+
+
 @bot.event
 async def on_ready():
     print('Logged in as')
@@ -55,7 +62,7 @@ async def on_ready():
 
 
 
-@tasks.loop(seconds=3)  # task runs every 60 seconds
+@tasks.loop(seconds=15)  # task runs every 10 seconds
 async def announcements_loop():
     global lastEntry
     time_now = datetime.datetime.now()
@@ -68,12 +75,12 @@ async def announcements_loop():
 @bot.group(description='Main command')
 async def announce(ctx):
     if ctx.invoked_subcommand is None:
-        await ctx.reply(f'No such sub-command exists: **{ctx.subcommand_passed}**')
+        await try_private(ctx, f'No such sub-command exists: **{ctx.subcommand_passed}**')
 
 
 @announce.command(description='Respond with help page of Announce commands')
 async def help(ctx):
-    await ctx.message.author.send(f'''
+    await try_private(ctx, f'''
 __Announcement **Bot** Help page__
 
 Use **$announce** followed by the sub-command
@@ -109,14 +116,14 @@ Subcommands:
 async def list(ctx):
     tosend = '**__Announcements list__**\n'
     tosend += str(annManager)
-    await ctx.reply(tosend)
+    await try_private(ctx,tosend)
 
 
 @announce.command(description='Cancel an announcement')
 async def cancel(ctx, id: str):
-    allowedRole = ctx.message.guild.roles.find("name", "@everyone")
-    if not ctx.message.member.roles.has(allowedRole.id):
-        await ctx.message.author.send('You do not have the required role')
+    allowed = any(x.name == '@everyone' for x in ctx.message.author.roles)
+    if not allowed:
+        await try_private(ctx,'You do not have the required role')
     else:
         await annManager.cancel(id, ctx.message)
 
@@ -125,7 +132,7 @@ async def cancel(ctx, id: str):
 async def add(ctx, how_many: int, granularity: str, date_time: str):
     allowed = any(x.name == '@everyone' for x in ctx.message.author.roles)
     if not allowed:
-        await ctx.message.author.send('You do not have the required role')
+        await try_private(ctx, 'You do not have the required role')
     else:
         try:
             untilDate = parse(date_time)
@@ -156,7 +163,7 @@ async def add(ctx, how_many: int, granularity: str, date_time: str):
             await error(ctx)
             return
 
-        await ctx.message.author.send(f'New announcement added to my watchlist. Id {an.uuid}')
+        await try_private(ctx, f'New announcement added to my watchlist. Id {an.uuid}')
 
 
 def calculate_sleep(count, granularity):
@@ -164,7 +171,7 @@ def calculate_sleep(count, granularity):
 
 
 async def error(ctx, msg=None):
-    await ctx.message.author.send(f'Command error. {msg if msg is not None else ""}')
+    await try_private(ctx, f'Command error. {msg if msg is not None else ""}')
 
 
 if __name__ == '__main__':

@@ -111,40 +111,48 @@ async def list(ctx):
 
 @announce.command(description='Cancel an announcement')
 async def cancel(ctx, id: str):
-    await annManager.cancel(id, ctx.message)
+    allowedRole = ctx.message.guild.roles.find("name", "@everyone")
+    if not ctx.message.member.roles.has(allowedRole.id):
+        await ctx.reply('You do not have the required role')
+    else:
+        await annManager.cancel(id, ctx.message)
 
 
 @announce.command(description='Create a new announcement')
 async def add(ctx, how_many: int, granularity: str, date_time: str):
-    try:
-        untilDate = parse(date_time)
-    except Exception as e:
-        print(e)
-        await error(ctx, f'Could not understand the date "{date_time}"')
-        return
+    allowedRole = ctx.message.guild.roles.find("name", "@everyone")
+    if not ctx.message.member.roles.has(allowedRole.id):
+        await ctx.reply('You do not have the required role')
+    else:
+        try:
+            untilDate = parse(date_time)
+        except Exception as e:
+            print(e)
+            await error(ctx, f'Could not understand the date "{date_time}"')
+            return
 
-    try:
-        content = ctx.message.reference.resolved.content
-    except:
-        await error(ctx, f'Did not find the replied message to announce. '
-                         f'Make sure you "Reply" the message containing the announcement ')
-        return
+        try:
+            content = ctx.message.reference.resolved.content
+        except:
+            await error(ctx, f'Did not find the replied message to announce. '
+                             f'Make sure you "Reply" the message containing the announcement ')
+            return
 
-    try:
-        sleep = calculate_sleep(how_many, granularity)
-    except:
-        await error(ctx, f'The granularity did not match any known ones.')
-        return
+        try:
+            sleep = calculate_sleep(how_many, granularity)
+        except:
+            await error(ctx, f'The granularity did not match any known ones.')
+            return
 
-    try:
-        an = Announcement(content, ctx, sleep, untilDate, ctx.message.author)
-        annManager.add(an)
-    except Exception as e:
-        print(e)
-        await error(ctx)
-        return
+        try:
+            an = Announcement(content, ctx, sleep, untilDate, ctx.message.author)
+            annManager.add(an)
+        except Exception as e:
+            print(e)
+            await error(ctx)
+            return
 
-    await ctx.reply(f'New announcement added to my watchlist. Id {an.uuid}')
+        await ctx.reply(f'New announcement added to my watchlist. Id {an.uuid}')
 
 
 def calculate_sleep(count, granularity):

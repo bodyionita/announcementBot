@@ -71,7 +71,7 @@ async def announce(ctx):
 
 @announce.command(description='Respond with help page of Announce commands')
 async def help(ctx):
-    await ctx.reply(f'''
+    await ctx.message.author.send(f'''
 __Announcement **Bot** Help page__
 
 Use **$announce** followed by the sub-command
@@ -114,16 +114,16 @@ async def list(ctx):
 async def cancel(ctx, id: str):
     allowedRole = ctx.message.guild.roles.find("name", "@everyone")
     if not ctx.message.member.roles.has(allowedRole.id):
-        await ctx.reply('You do not have the required role')
+        await ctx.message.author.send('You do not have the required role')
     else:
         await annManager.cancel(id, ctx.message)
 
 
 @announce.command(description='Create a new announcement')
 async def add(ctx, how_many: int, granularity: str, date_time: str):
-    allowed  = any(x.name == '@everyone' for x in ctx.message.author.roles)
+    allowed = any(x.name == '@everyone' for x in ctx.message.author.roles)
     if not allowed:
-        await ctx.reply('You do not have the required role')
+        await ctx.message.author.send('You do not have the required role')
     else:
         try:
             untilDate = parse(date_time)
@@ -154,7 +154,7 @@ async def add(ctx, how_many: int, granularity: str, date_time: str):
             await error(ctx)
             return
 
-        await ctx.reply(f'New announcement added to my watchlist. Id {an.uuid}')
+        await ctx.message.author.send(f'New announcement added to my watchlist. Id {an.uuid}')
 
 
 def calculate_sleep(count, granularity):
@@ -162,7 +162,7 @@ def calculate_sleep(count, granularity):
 
 
 async def error(ctx, msg=None):
-    await ctx.reply(f'Command error. {msg if msg is not None else ""}')
+    await ctx.message.author.send(f'Command error. {msg if msg is not None else ""}')
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import os
 import datetime
 
 from dateutil.parser import parse
@@ -166,6 +167,7 @@ async def error(ctx, msg=None):
 
 
 if __name__ == '__main__':
-    token = config('discordBotToken')
+    token = os.environ['discordBotToken']
+    #token = config('discordBotToken')
     announcements_loop.start()
     bot.run(token)

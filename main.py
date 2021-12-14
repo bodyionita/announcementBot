@@ -10,47 +10,10 @@ from keep_alive import keep_alive
 from announcement import Announcement
 from announcements_manager import AnnouncementsManager
 
-SECOND = 1
-MINUTE = 60 * SECOND
-HOUR = 60 * MINUTE
-DAY = 24 * HOUR
-WEEK = 7 * DAY
-MONTH = 29 * DAY
-YEAR = 12 * MONTH
-
-granularityMaping = {
-    'S': SECOND,
-    'minute': MINUTE,
-    'minutes': MINUTE,
-    'Minute': MINUTE,
-    'Minutes': MINUTE,
-    'M': MINUTE,
-    'hour': HOUR,
-    'hours': HOUR,
-    'Hour': HOUR,
-    'Hours': HOUR,
-    'H': HOUR,
-    'day': DAY,
-    'days': DAY,
-    'd': DAY,
-    'week': WEEK,
-    'weeks': WEEK,
-    'w': WEEK,
-    'month': MONTH,
-    'months': MONTH,
-    'm': MONTH}
 
 bot = Bot(command_prefix='$', description='A bot that makes announcements at certain intervals')
 annManager = AnnouncementsManager()
 lastEntry = datetime.datetime.now()
-
-
-async def try_private(ctx, content):
-  try:
-    await ctx.message.author.send(content)
-  except:
-    await ctx.reply('I tried to message you privately but I couldn\'t so now I am printing here. Message:' + content)
-
 
 @bot.event
 async def on_ready():
@@ -58,18 +21,6 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('------')
-
-
-
-
-@tasks.loop(seconds=5)  # task runs every 10 seconds
-async def announcements_loop():
-    global lastEntry
-    time_now = datetime.datetime.now()
-    seconds_passed = (time_now - lastEntry).total_seconds()
-
-    await annManager.update(seconds_passed)
-    lastEntry = time_now
 
 
 @bot.group(description='Main command')
@@ -151,17 +102,29 @@ async def add(ctx, how_many: int, minutes_interval: float):
         await try_private(ctx, f'New announcement added to my watchlist. Id {an.uuid}')
 
 
-def calculate_sleep(count, granularity):
-    return count * granularityMaping.get(granularity)
+async def try_private(ctx, content):
+  try:
+    await ctx.message.author.send(content)
+  except:
+    await ctx.reply('I tried to message you privately but I couldn\'t so now I am printing here. Message:' + content)
 
 
 async def error(ctx, msg=None):
     await try_private(ctx, f'Command error. {msg if msg is not None else ""}')
 
 
+@tasks.loop(seconds=5)  # task runs every 10 seconds
+async def announcements_loop():
+    global lastEntry
+    time_now = datetime.datetime.now()
+    seconds_passed = (time_now - lastEntry).total_seconds()
+
+    await annManager.update(seconds_passed)
+    lastEntry = time_now
+
 if __name__ == '__main__':
     token = os.environ['discordBotToken']
     #token = config('discordBotToken')
     announcements_loop.start()
-    keep_alive()
+    keep_alive() # empty flask webserver to ping this Replit from an UptimeRobot Monitor and keep it alive
     bot.run(token)

@@ -121,8 +121,8 @@ async def cancel(ctx, id: str):
 
 @announce.command(description='Create a new announcement')
 async def add(ctx, how_many: int, granularity: str, date_time: str):
-    allowedRole = ctx.message.guild.roles.find("name", "@everyone")
-    if not ctx.message.member.roles.has(allowedRole.id):
+    allowed  = any(x.name == '@everyone' for x in ctx.message.author.roles)
+    if not allowed:
         await ctx.reply('You do not have the required role')
     else:
         try:
@@ -144,7 +144,8 @@ async def add(ctx, how_many: int, granularity: str, date_time: str):
         except:
             await error(ctx, f'The granularity did not match any known ones.')
             return
-
+        if sleep < 30:
+            await error(ctx, 'Frequency too low. It should be at least 30 seconds apart.')
         try:
             an = Announcement(content, ctx, sleep, untilDate, ctx.message.author)
             annManager.add(an)

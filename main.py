@@ -34,10 +34,9 @@ async def announce(ctx):
 async def help(ctx):
     await try_private(ctx, f'''
 __Announcement **Bot** Help page__
+***The announcements content can be passed either at the end of the command or by replying the command to the message that you wish to be announced***
 
-Use **$announce** followed by the sub-command
-
-Subcommands:
+Use **$announce** followed by the sub-command:
 
 **$announce add <how_many> <interval_in_minutes>  <content>** - adds new announcement
     where: 

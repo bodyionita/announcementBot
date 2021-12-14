@@ -4,7 +4,7 @@ import uuid
 
 class Announcement:
 
-    def __init__(self, content, ctx, sleep, until, requester):
+    def __init__(self, content, ctx, sleep, requester, until=datetime.datetime(2023, 1, 1)):
         self.uuid = str(uuid.uuid4())[:8]
         self.content = content
         self.ctx = ctx

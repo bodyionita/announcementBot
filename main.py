@@ -11,10 +11,14 @@ from keep_alive import keep_alive
 from announcement import Announcement
 from announcements_manager import AnnouncementsManager
 
+DEFAULT_FREQUENCY=0.1 # In minutes
+DEFAULT_REPETITIONS=5 # number of repetitions
+allowed_roles = ['@everyone']
 
 bot = Bot(command_prefix='$', description='A bot that makes announcements at certain intervals')
 annManager = AnnouncementsManager()
 lastEntry = datetime.datetime.now()
+
 
 @bot.event
 async def on_ready():
@@ -22,6 +26,29 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('------')
+
+
+def authorized(ctx):
+    try:
+        return any(x.name in allowed_roles for x in ctx.message.author.roles)
+    except:
+        return False  # not allowing private itneraction on secure commands
+
+
+@bot.listen('on_message')
+async def on_message(message):
+    if message.author == bot.user:
+        return
+    ctx = await bot.get_context(message)
+    if not authorized(ctx):
+        return  # do not look at non authorized user's messages
+
+    msg = message.content
+    if '#hot' in msg:
+        msg = msg.replace('#hot','')
+        if message.reference is not None:
+            msg = message.reference.resolved.content
+        await process_add(ctx,DEFAULT_REPETITIONS, DEFAULT_FREQUENCY, msg)
 
 
 @bot.group(description='Main command')
@@ -49,14 +76,14 @@ Use **$announce** followed by the sub-command:
         $announce add 1 3 whatever is important...  - announce 1 time every 3 minutes the message "whatever is important..." 
 
 **$announce list** - lists current announcements
-    
+
 **$announce cancel <id>** - cancels an announcement
     where: 
         **<id>** - a sequence of characters representing the announcement to cancel
     examples: 
         $announce cancel 36d3f852
         $announce cancel 23c9ce39  
-    
+
     ''')
 
 
@@ -64,53 +91,58 @@ Use **$announce** followed by the sub-command:
 async def list(ctx):
     tosend = '**__Announcements list__**\n'
     tosend += str(annManager)
-    await try_private(ctx,tosend)
+    await try_private(ctx, tosend)
 
 
 @announce.command(description='Cancel an announcement')
 async def cancel(ctx, id: str):
-    allowed = any(x.name == '@everyone' for x in ctx.message.author.roles)
-    if not allowed:
-        await try_private(ctx,'You do not have the required role')
+    if not authorized(ctx):
+        await try_private(ctx, 'You do not have the required role')
     else:
         await annManager.cancel(id, ctx.message)
 
+
 @announce.command(description='Create a new announcement')
-async def add(ctx, how_many: int, minutes_interval: float, *, content: str=None):
-    allowed = any(x.name == '@everyone' for x in ctx.message.author.roles)
-    if not allowed:
+async def add(ctx, how_many: int, minutes_interval: float, *, content: str = None):
+    if not authorized(ctx):
         await try_private(ctx, 'You do not have the required role')
     else:
-        final_content = content
-        try:
-            final_content = ctx.message.reference.resolved.content
-        except:
-            pass
-            # await error(ctx, f'Did not find the replied message to announce. '
-            #                  f'Make sure you "Reply" the message containing the announcement ')
-            # return  
-        if minutes_interval < 0.5:
-            await error(ctx, 'Frequency too low. It should be at least 30 seconds apart.')
-            #return
+        await process_add(ctx, minutes_interval, content)
+        
 
-        total_minutes = minutes_interval * how_many
-        until = datetime.datetime.now()+timedelta(minutes=total_minutes)
-        try:
-            an = Announcement(final_content, ctx, minutes_interval*60, how_many, ctx.message.author, until)
-            annManager.add(an)
-        except Exception as e:
-            print(e)
-            await error(ctx)
-            return
+async def process_add(ctx, how_many: int, minutes_interval: float, content: str):
+    final_content = content
+    try:
+        final_content = ctx.message.reference.resolved.content
+    except:
+        pass
+        # await error(ctx, f'Did not find the replied message to announce. '
+        #                  f'Make sure you "Reply" the message containing the announcement ')
+        # return  
+    if minutes_interval < 0.5:
+        await error(ctx, 'Frequency too low. It should be at least 30 seconds apart.')
+        # return
 
-        await try_private(ctx, f'New announcement added to my watchlist. Id {an.uuid}')
+    total_minutes = minutes_interval * how_many
+    until = datetime.datetime.now() + timedelta(minutes=total_minutes)
+    try:
+        an = Announcement(final_content, ctx, minutes_interval * 60, how_many, ctx.message.author, until)
+        annManager.add(an)
+    except Exception as e:
+        print(e)
+        await error(ctx)
+        return
+
+    await try_private(ctx, f'New announcement added to my watchlist. Id {an.uuid}')
+
 
 
 async def try_private(ctx, content):
-  try:
-    await ctx.message.author.send(content)
-  except:
-    await ctx.reply('I tried to message you privately but I couldn\'t so now I am printing here. Message:' + content)
+    try:
+        await ctx.message.author.send(content)
+    except:
+        await ctx.reply(
+            '*I tried to message you privately but I couldn\'t so now I am printing here.*\n' + content)
 
 
 async def error(ctx, msg=None):
@@ -126,9 +158,10 @@ async def announcements_loop():
     await annManager.update(seconds_passed)
     lastEntry = time_now
 
+
 if __name__ == '__main__':
     token = os.environ['discordBotToken']
-    #token = config('discordBotToken')
+    # token = config('discordBotToken')
     announcements_loop.start()
-    keep_alive() # empty flask webserver to ping this Replit from an UptimeRobot Monitor and keep it alive
+    keep_alive()  # empty flask webserver to ping this Replit from an UptimeRobot Monitor and keep it alive
     bot.run(token)

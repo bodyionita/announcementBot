@@ -53,29 +53,31 @@ async def announce(ctx):
 @announce.command(description='Respond with help page of Announce commands')
 async def help(ctx):
     await try_private(ctx, f'''
-__Announcement **Bot** Help page__
-***The announcements content can be passed either at the end of the command or by replying the command to the message that you wish to be announced***
+__Announcement Bot Help page__
+*The announcements content can be passed either at the end of the command or by replying the command to the message that you wish to be announced*
 
-Use **$announce** followed by the sub-command:
+`#hot` at the end of a message (or as a reply to another message) creates a default announcement that is broadcasted to all subscribers
 
-**$announce add <how_many> <interval_in_minutes>  <content>** - adds new announcement
+`$announce list` - lists current announcements
+
+`$announce subscribe` - susbcribe to the #hot announcements to receive private message when a moderator tags a message with #hot
+
+`$announce add <how_many> <interval_in_minutes>  <content>` - adds new announcement
     where: 
        **<how_many>** - a number representing how many times the announcement should be printed
        **<interval_in_minutes>** - a number representing how often in minutes it should do so
-       **<content> - if it's not a reply you can pass content as part of the command at the end of it
+       **<content>** - if it's not a reply you can pass content as part of the command at the end of it
     examples:   
-        $announce add 40 15 - announce 40 times every 15 minutes the message that you replied to
-        $announce add 20 3  - announce 20 times every 3 minutes  the message that you replied to
-        $announce add 1 3 whatever is important...  - announce 1 time every 3 minutes the message "whatever is important..." 
+        `$announce add 40 15` - announce 40 times every 15 minutes the message that you replied to
+        `$announce add 20 3`  - announce 20 times every 3 minutes  the message that you replied to
+        `$announce add 1 3 whatever is important...`  - announce 1 time every 3 minutes the message "whatever is important..." 
 
-**$announce list** - lists current announcements
-
-**$announce cancel <id>** - cancels an announcement
+`$announce cancel <id>` - cancels an announcement
     where: 
         **<id>** - a sequence of characters representing the announcement to cancel
     examples: 
-        $announce cancel 36d3f852
-        $announce cancel 23c9ce39  
+        `$announce cancel 36d3f852`
+        `$announce cancel 23c9ce39`
 
     ''')
 

@@ -6,20 +6,34 @@ class AnnouncementType:
     Channel = 1,
     Private = 2
 
+class AnnouncementData:
+
+    def __init__(self, content, ctx, sleep, how_many, annType = AnnouncementType.Channel):
+        self.content = content
+        self.sleep = sleep
+        self.how_many = how_many
+        self.annType = int(annType)
+        self.uuid = str(uuid.uuid4())[:8]
+        self.messageId = ctx.message.id
+        self.channelId = ctx.channel.id
+        self.guildId = ctx.guild.id
+        self.requester = ctx.author.id
+
+async def create_from_data(bot, data):
+    channel = bot.get_channel(data.channelId)
+    message = await channel.fetch_message(data.messageId)
+    context = await bot.get_context(message)
+    return Announcement(context, data)
 
 class Announcement:
 
-    def __init__(self, content, ctx, sleep, how_many, requester, annType = AnnouncementType.Channel):
-        self.annType = annType
-        self.uuid = str(uuid.uuid4())[:8]
-        self.content = content
+    def __init__(self, ctx, data):
+        self.data = data
         self.ctx = ctx
-        self.sleep = sleep
-        self.how_many = how_many
-        self.requester = requester
         self.expired = False
-        self.remaining_seconds = sleep
-        self.remaining_prints = how_many
+        self.remaining_seconds = data.sleep
+        self.remaining_prints = data.how_many
+
 
     async def pass_time(self, seconds, subscribers):
         self.remaining_seconds -= seconds
@@ -28,26 +42,26 @@ class Announcement:
             self.expired = True
 
         if self.remaining_seconds <= 0:
-            self.remaining_seconds = self.sleep
+            self.remaining_seconds = self.data.sleep
             self.remaining_prints -= 1
             if not self.expired:
                 await self.announce(subscribers)
 
     async def announce(self, subscribers):
-        if self.annType is AnnouncementType.Channel:
-            await self.ctx.message.channel.send(self.content)
+        if self.data.annType is AnnouncementType.Channel:
+            await self.ctx.message.channel.send(self.data.content)
         else:
             for sub in subscribers:
-                await sub.send(f'New **#hot**: {self.content}')
+                await sub.send(f'**#hot** news: {self.data.content}')
 
     def __str__(self):
-        minutes = self.sleep / 60
+        minutes = self.data.sleep / 60
         hours = minutes / 60
         days = hours / 24
 
-        frequency = f'{self.sleep} seconds' if minutes < 1 else (
+        frequency = f'{self.data.sleep} seconds' if minutes < 1 else (
             f'{minutes} minutes' if hours < 1 else (f'{hours} hours' if days < 1 else f'{days} days'))
 
-        return f'"**{self.content[0:20]}...**" requested by {self.requester}. ' \
+        return f'"**{self.data.content[0:20]}...**" requested by {self.data.requester}. ' \
                f'Announces on channel **{self.ctx.message.channel}** every **{frequency}**, ' \
-               f'{self.remaining_prints} announces left. Id: {self.uuid}. '
+               f'{self.remaining_prints} announces left. Id: {self.data.uuid}. '

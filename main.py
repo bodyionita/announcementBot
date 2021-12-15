@@ -10,7 +10,7 @@ from discord.ext.commands import Bot
 import motor.motor_asyncio
 
 from keep_alive import keep_alive
-from announcement import Announcement, AnnouncementType
+from announcement import Announcement, AnnouncementType, AnnouncementData, create_from_data
 from announcements_manager import AnnouncementsManager
 
 DEFAULT_FREQUENCY = 0.1 # In minutes
@@ -143,14 +143,15 @@ async def process_add(ctx, how_many: int, minutes_interval: float, content: str,
         # return
 
     try:
-        an = Announcement(final_content, ctx, minutes_interval * 60, how_many, ctx.author, annType)
+        annData = AnnouncementData(final_content, ctx, minutes_interval * 60, how_many, annType)
+        an = await create_from_data(bot, annData)
         annManager.add(an)
     except Exception as e:
         print(e)
         await error(ctx)
         return
 
-    await try_private(ctx, f'New announcement added to my watchlist. Id {an.uuid}')
+    await try_private(ctx, f'New announcement added to my watchlist. Id {an.data.uuid}')
 
 
 def authorized(ctx):

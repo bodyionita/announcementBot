@@ -10,7 +10,7 @@ class AnnouncementsManager:
         self.__announcements = {}
 
     def add(self, an: Announcement):
-        self.__announcements[an.uuid] = an
+        self.__announcements[an.data.uuid] = an
 
     def remove(self, uuid: str):
         self.__announcements.pop(uuid)

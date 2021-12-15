@@ -6,14 +6,24 @@ from announcement import Announcement
 
 class AnnouncementsManager:
 
-    def __init__(self):
+    def __init__(self, annCollection):
         self.__announcements = {}
+        self.annCollection = annCollection
 
-    def add(self, an: Announcement):
+    async def add(self, an: Announcement, push=True):
+        if push:
+            await self.push_db_announcement(an.data)
         self.__announcements[an.data.uuid] = an
 
-    def remove(self, uuid: str):
+    async def remove(self, uuid: str):
+        await self.remove_db_announcement(uuid)
         self.__announcements.pop(uuid)
+
+    async def push_db_announcement(self, ann):
+        result = await self.annCollection.insert_one(ann.toJson())
+
+    async def remove_db_announcement(self, ann):
+        pass
 
     async def update(self, seconds_passed, subscribers):
         expired_ids = []
@@ -22,11 +32,11 @@ class AnnouncementsManager:
             if an.expired is True:
                 expired_ids.append(id)
         for id in expired_ids:
-            self.remove(id)
+            await self.remove(id)
 
     async def cancel(self, id: str, message):
         try:
-            self.remove(id)
+            await self.remove(id)
         except:
             await message.reply(f'Announcement with that id was not found')
         finally:

@@ -1,4 +1,5 @@
 import datetime
+import json
 import uuid
 
 
@@ -6,24 +7,55 @@ class AnnouncementType:
     Channel = 1,
     Private = 2
 
+
 class AnnouncementData:
 
-    def __init__(self, content, ctx, sleep, how_many, annType = AnnouncementType.Channel):
+    def __init__(self, content, sleep, how_many, annType, uuid, messageId, channelId, guildId, requester, requesterId):
         self.content = content
         self.sleep = sleep
         self.how_many = how_many
-        self.annType = int(annType)
-        self.uuid = str(uuid.uuid4())[:8]
-        self.messageId = ctx.message.id
-        self.channelId = ctx.channel.id
-        self.guildId = ctx.guild.id
-        self.requester = ctx.author.id
+        self.annType = annType
+        self.uuid = uuid
+        self.messageId = messageId
+        self.channelId = channelId
+        self.guildId = guildId
+        self.requester = requester
+        self.requesterId = requesterId
+
+    def toJson(self):
+        return {
+            'content': self.content,
+            'sleep': self.sleep,
+            'how_many': self.how_many,
+            'annType': self.annType,
+            'uuid': self.uuid,
+            'messageId': self.messageId,
+            'channelId': self.channelId,
+            'guildId': self.guildId,
+            'requester': self.requester,
+            'requesterId': self.requesterId
+        }
+
+
+def create_data(content, ctx, sleep, how_many, annType=AnnouncementType.Channel):
+    return AnnouncementData(content,
+                            sleep,
+                            how_many,
+                            int(annType),
+                            str(uuid.uuid4())[:8],
+                            ctx.message.id,
+                            ctx.channel.id,
+                            ctx.guild.id,
+                            ctx.author.name,
+                            ctx.author.id)
+
 
 async def create_from_data(bot, data):
     channel = bot.get_channel(data.channelId)
     message = await channel.fetch_message(data.messageId)
     context = await bot.get_context(message)
     return Announcement(context, data)
+
 
 class Announcement:
 
@@ -33,7 +65,6 @@ class Announcement:
         self.expired = False
         self.remaining_seconds = data.sleep
         self.remaining_prints = data.how_many
-
 
     async def pass_time(self, seconds, subscribers):
         self.remaining_seconds -= seconds
@@ -52,7 +83,10 @@ class Announcement:
             await self.ctx.message.channel.send(self.data.content)
         else:
             for sub in subscribers:
-                await sub.send(f'**#hot** news: {self.data.content}')
+                try:
+                    await sub.send(f'**#hot** news: {self.data.content}')
+                except:
+                    pass
 
     def __str__(self):
         minutes = self.data.sleep / 60

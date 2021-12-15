@@ -1,7 +1,9 @@
+import json
 import os
 import datetime
 from datetime import timedelta
 
+import discord
 from dateutil.parser import parse
 from decouple import config
 from discord.ext import tasks
@@ -10,31 +12,31 @@ from discord.ext.commands import Bot
 import motor.motor_asyncio
 
 from keep_alive import keep_alive
-from announcement import Announcement, AnnouncementType, AnnouncementData, create_from_data
+from announcement import Announcement, AnnouncementType, AnnouncementData, create_from_data, create_data
 from announcements_manager import AnnouncementsManager
 
-DEFAULT_FREQUENCY = 0.1 # In minutes
-DEFAULT_REPETITIONS = 5 # number of repetitions
+DEFAULT_FREQUENCY = 0.1  # In minutes
+DEFAULT_REPETITIONS = 5  # number of repetitions
 allowed_roles = ['@everyone']
 subscriber_list = []
 
 token = config('discordBotToken')
 mongourl = config('mongodb')
 # token = os.environ['discordBotToken']
-#mongourl = os.environ['mongodb']
+# mongourl = os.environ['mongodb']
 
-
-bot = Bot(command_prefix='$', description='A bot that makes announcements at certain intervals')
-annManager = AnnouncementsManager()
-lastEntry = datetime.datetime.now()
 
 client = motor.motor_asyncio.AsyncIOMotorClient(mongourl)
-#client = MongoClient(mongourl)
 db = client['stakeborgdao-bot']
 
 configsCollection = db['configs']
 announcementsCollection = db['announcements']
 subscribersCollection = db['subscribers']
+
+activity = discord.Activity(type=discord.ActivityType.listening, name="$announce help | $help announce")
+bot = Bot(command_prefix='$', activity=activity, status=discord.Status.online, description='A bot that makes announcements at certain intervals')
+annManager = AnnouncementsManager(announcementsCollection)
+lastEntry = datetime.datetime.now()
 
 
 @bot.event
@@ -43,6 +45,10 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('------')
+    await get_configs()
+    await get_db_subscribers()
+    await get_db_announcements()
+
 
 @bot.group(description='Main command')
 async def announce(ctx):
@@ -99,10 +105,18 @@ async def cancel(ctx, id: str):
 
 @announce.command(description='Subscribe to the #hot announcements')
 async def subscribe(ctx):
-        if ctx.author not in subscriber_list:
-            subscriber_list.append(ctx.author)
-            await push_db_subscriber(ctx.author)
-            await try_private(ctx, 'You have been subscribed to #hot announcements')
+    if ctx.author not in subscriber_list:
+        subscriber_list.append(ctx.author)
+        await push_db_subscriber(ctx.author)
+        await try_private(ctx, 'You have been subscribed to #hot announcements')
+
+
+@announce.command(description='Unsubscribe from the #hot announcements')
+async def unsubscribe(ctx):
+    if ctx.author in subscriber_list:
+        subscriber_list.pop(ctx.author)
+        await remove_db_subscriber(ctx.author)
+        await try_private(ctx, 'You have been unsubscribed from #hot announcements')
 
 
 @bot.listen('on_message')
@@ -126,10 +140,11 @@ async def add(ctx, how_many: int, minutes_interval: float, *, content: str = Non
     if not authorized(ctx):
         await try_private(ctx, 'You do not have the required role')
     else:
-        await process_add(annManager, ctx, how_many, minutes_interval, content)
-        
+        await process_add(ctx, how_many, minutes_interval, content)
 
-async def process_add(ctx, how_many: int, minutes_interval: float, content: str, annType: AnnouncementType = AnnouncementType.Channel):
+
+async def process_add(ctx, how_many: int, minutes_interval: float, content: str,
+                      annType: AnnouncementType = AnnouncementType.Channel):
     final_content = content
     try:
         final_content = ctx.message.reference.resolved.content
@@ -143,9 +158,10 @@ async def process_add(ctx, how_many: int, minutes_interval: float, content: str,
         # return
 
     try:
-        annData = AnnouncementData(final_content, ctx, minutes_interval * 60, how_many, annType)
+        annData = create_data(final_content, ctx, minutes_interval * 60, how_many, annType)
         an = await create_from_data(bot, annData)
-        annManager.add(an)
+        await annManager.add(an)
+
     except Exception as e:
         print(e)
         await error(ctx)
@@ -178,15 +194,20 @@ async def get_configs():
 
 
 async def get_db_announcements():
-    pass
-
-
-async def push_db_announcement(ann):
-    pass
-
-
-async def remove_db_announcement(ann):
-    pass
+    results = announcementsCollection.find()
+    for result in await results.to_list(length=1000):
+        anData = AnnouncementData(result['content'],
+                                  result['sleep'],
+                                  result['how_many'],
+                                  result['annType'],
+                                  result['uuid'],
+                                  result['messageId'],
+                                  result['channelId'],
+                                  result['guildId'],
+                                  result['requester'],
+                                  result['requesterId'])
+        ann = await create_from_data(bot, anData)
+        await annManager.add(ann, False)
 
 
 async def get_db_subscribers():
@@ -194,6 +215,9 @@ async def get_db_subscribers():
 
 
 async def push_db_subscriber(author):
+    pass
+
+async def remove_db_subscriber(author):
     pass
 
 
@@ -209,5 +233,5 @@ async def announcements_loop():
 
 if __name__ == '__main__':
     announcements_loop.start()
-    #keep_alive()  # empty flask webserver to ping this Replit from an UptimeRobot Monitor and keep it alive
+    # keep_alive()  # empty flask webserver to ping this Replit from an UptimeRobot Monitor and keep it alive
     bot.run(token)

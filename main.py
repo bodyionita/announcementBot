@@ -44,7 +44,7 @@ async def on_message(message):
         return  # do not look at non authorized user's messages
 
     msg = message.content
-    if '#hot' in msg:
+    if msg.endswith('#hot'):
         msg = msg.replace('#hot','')
         if message.reference is not None:
             msg = message.reference.resolved.content
@@ -107,7 +107,7 @@ async def add(ctx, how_many: int, minutes_interval: float, *, content: str = Non
     if not authorized(ctx):
         await try_private(ctx, 'You do not have the required role')
     else:
-        await process_add(ctx, minutes_interval, content)
+        await process_add(ctx, how_many, minutes_interval, content)
         
 
 async def process_add(ctx, how_many: int, minutes_interval: float, content: str):

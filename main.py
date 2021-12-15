@@ -17,8 +17,9 @@ from announcements_manager import AnnouncementsManager
 
 DEFAULT_FREQUENCY = 0.1  # In minutes
 DEFAULT_REPETITIONS = 5  # number of repetitions
-allowed_roles = ['@everyone']
-subscriber_list = []
+ALLOWED_ROLES = ['@everyone']
+
+subscribers = {}
 
 token = config('discordBotToken')
 mongourl = config('mongodb')
@@ -45,9 +46,10 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('------')
+
     await get_configs()
-    await get_db_subscribers()
     await get_db_announcements()
+    await get_db_subscribers()
 
 
 @bot.group(description='Main command')
@@ -105,16 +107,16 @@ async def cancel(ctx, id: str):
 
 @announce.command(description='Subscribe to the #hot announcements')
 async def subscribe(ctx):
-    if ctx.author not in subscriber_list:
-        subscriber_list.append(ctx.author)
+    if ctx.author.id not in subscribers.keys():
+        subscribers[ctx.author.id] = ctx.author
         await push_db_subscriber(ctx.author)
         await try_private(ctx, 'You have been subscribed to #hot announcements')
 
 
 @announce.command(description='Unsubscribe from the #hot announcements')
 async def unsubscribe(ctx):
-    if ctx.author in subscriber_list:
-        subscriber_list.pop(ctx.author)
+    if ctx.author.id in subscribers.keys():
+        subscribers.pop(ctx.author.id)
         await remove_db_subscriber(ctx.author)
         await try_private(ctx, 'You have been unsubscribed from #hot announcements')
 
@@ -150,7 +152,7 @@ async def process_add(ctx, how_many: int, minutes_interval: float, content: str,
     try:
         final_content = ctx.message.reference.resolved.content
     except Exception as e:
-        print(e.with_traceback())
+        print(e)
 
     if minutes_interval < 0.5:
         # await error(ctx, 'Frequency too low. It should be at least 30 seconds apart.')
@@ -163,7 +165,7 @@ async def process_add(ctx, how_many: int, minutes_interval: float, content: str,
         await annManager.add(an)
 
     except Exception as e:
-        print(e.with_traceback())
+        print(e)
         await error(ctx)
         return
 
@@ -172,7 +174,7 @@ async def process_add(ctx, how_many: int, minutes_interval: float, content: str,
 
 def authorized(ctx):
     try:
-        return any(x.name in allowed_roles for x in ctx.author.roles)
+        return any(x.name in ALLOWED_ROLES for x in ctx.author.roles)
     except:
         return False  # not allowing private itneraction on secure commands
 
@@ -211,14 +213,28 @@ async def get_db_announcements():
 
 
 async def get_db_subscribers():
-    pass
-
+    results = subscribersCollection.find()
+    for result in await results.to_list(length=5000):
+        userId = result['userId']
+        guildId = result['guildId']
+        try:
+            guild = bot.get_guild(guildId)
+            subscribers[userId] = await guild.fetch_member(userId)
+        except Exception as e:
+            print(e)
 
 async def push_db_subscriber(author):
-    pass
+    try:
+        result = await subscribersCollection.insert_one({'userId': author.id, 'name': author.name, 'displayName': author.display_name, 'guild': author.guild.name, 'guildId': author.guild.id })
+    except Exception as e:
+        print(e)
+
 
 async def remove_db_subscriber(author):
-    pass
+    try:
+        result = await subscribersCollection.delete_many({'userId': author.id})
+    except Exception as e:
+        print(e)
 
 
 @tasks.loop(seconds=5)  # task runs every 10 seconds
@@ -227,11 +243,22 @@ async def announcements_loop():
     time_now = datetime.datetime.now()
     seconds_passed = (time_now - lastEntry).total_seconds()
 
-    await annManager.update(seconds_passed, subscriber_list)
+    await annManager.update(seconds_passed, subscribers)
     lastEntry = time_now
 
 
+@tasks.loop(seconds=30)  # task runs every 10 seconds
+async def config_get_loop():
+    global DEFAULT_FREQUENCY
+    global DEFAULT_REPETITIONS
+    global ALLOWED_ROLES
+    results = await configsCollection.find_one({'name': 'default'}, max_time_ms=100)
+    DEFAULT_FREQUENCY = results['default_frequency']
+    DEFAULT_REPETITIONS = results['default_count']
+    ALLOWED_ROLES = results['allowed_roles']
+
 if __name__ == '__main__':
+    config_get_loop.start()
     announcements_loop.start()
     # keep_alive()  # empty flask webserver to ping this Replit from an UptimeRobot Monitor and keep it alive
     bot.run(token)

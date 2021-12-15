@@ -82,7 +82,7 @@ class Announcement:
         if self.data.annType is AnnouncementType.Channel:
             await self.ctx.message.channel.send(self.data.content)
         else:
-            for sub in subscribers:
+            for sub in subscribers.values():
                 try:
                     await sub.send(f'**#hot** news: {self.data.content}')
                 except Exception as e:

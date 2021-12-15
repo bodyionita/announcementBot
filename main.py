@@ -7,6 +7,10 @@ from decouple import config
 from discord.ext import tasks
 from discord.ext.commands import Bot
 
+from pymongo import MongoClient
+from pprint import pprint
+import motor.motor_asyncio
+
 from keep_alive import keep_alive
 from announcement import Announcement
 from announcements_manager import AnnouncementsManager
@@ -14,10 +18,24 @@ from announcements_manager import AnnouncementsManager
 DEFAULT_FREQUENCY=0.1 # In minutes
 DEFAULT_REPETITIONS=5 # number of repetitions
 allowed_roles = ['@everyone']
+subscriber_list = []
+
+token = os.environ['discordBotToken']
+mongourl = os.environ['mongodb']
+
 
 bot = Bot(command_prefix='$', description='A bot that makes announcements at certain intervals')
 annManager = AnnouncementsManager()
+hotManager = AnnouncementsManager()
 lastEntry = datetime.datetime.now()
+
+client = motor.motor_asyncio.AsyncIOMotorClient(mongourl)
+#client = MongoClient(mongourl)
+db = client['stakeborgdao-bot']
+
+configs = db['configs']
+announcements = db['announcements']
+subscribers = db['subscribers']
 
 
 @bot.event
@@ -26,30 +44,6 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print('------')
-
-
-def authorized(ctx):
-    try:
-        return any(x.name in allowed_roles for x in ctx.message.author.roles)
-    except:
-        return False  # not allowing private itneraction on secure commands
-
-
-@bot.listen('on_message')
-async def on_message(message):
-    if message.author == bot.user:
-        return
-    ctx = await bot.get_context(message)
-    if not authorized(ctx):
-        return  # do not look at non authorized user's messages
-
-    msg = message.content
-    if msg.endswith('#hot'):
-        msg = msg.replace('#hot','')
-        if message.reference is not None:
-            msg = message.reference.resolved.content
-        await process_add(ctx,DEFAULT_REPETITIONS, DEFAULT_FREQUENCY, msg)
-
 
 @bot.group(description='Main command')
 async def announce(ctx):
@@ -102,12 +96,36 @@ async def cancel(ctx, id: str):
         await annManager.cancel(id, ctx.message)
 
 
+@announce.command(description='Subscribe to the #hot announcements')
+async def subscribe(ctx, id: str):
+    if not authorized(ctx):
+        await try_private(ctx, 'You do not have the required role')
+    else:
+        await annManager.cancel(id, ctx.message)
+
+
+@bot.listen('on_message')
+async def on_message(message):
+    if message.author == bot.user:
+        return
+    ctx = await bot.get_context(message)
+    if not authorized(ctx):
+        return  # do not look at non authorized user's messages
+
+    msg = message.content
+    if msg.endswith('#hot'):
+        msg = msg.replace('#hot','')
+        if message.reference is not None:
+            msg = message.reference.resolved.content
+        await process_add(hotManager, ctx, DEFAULT_REPETITIONS, DEFAULT_FREQUENCY, msg)
+
+
 @announce.command(description='Create a new announcement')
 async def add(ctx, how_many: int, minutes_interval: float, *, content: str = None):
     if not authorized(ctx):
         await try_private(ctx, 'You do not have the required role')
     else:
-        await process_add(ctx, how_many, minutes_interval, content)
+        await process_add(annManager, ctx, how_many, minutes_interval, content)
         
 
 async def process_add(ctx, how_many: int, minutes_interval: float, content: str):
@@ -136,6 +154,12 @@ async def process_add(ctx, how_many: int, minutes_interval: float, content: str)
     await try_private(ctx, f'New announcement added to my watchlist. Id {an.uuid}')
 
 
+def authorized(ctx):
+    try:
+        return any(x.name in allowed_roles for x in ctx.message.author.roles)
+    except:
+        return False  # not allowing private itneraction on secure commands
+
 
 async def try_private(ctx, content):
     try:
@@ -160,8 +184,8 @@ async def announcements_loop():
 
 
 if __name__ == '__main__':
-    token = os.environ['discordBotToken']
     # token = config('discordBotToken')
+    database_get.start()
     announcements_loop.start()
     keep_alive()  # empty flask webserver to ping this Replit from an UptimeRobot Monitor and keep it alive
     bot.run(token)

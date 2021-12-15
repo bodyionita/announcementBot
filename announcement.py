@@ -41,7 +41,7 @@ def create_data(content, ctx, sleep, how_many, annType=AnnouncementType.Channel)
     return AnnouncementData(content,
                             sleep,
                             how_many,
-                            int(annType),
+                            annType,
                             str(uuid.uuid4())[:8],
                             ctx.message.id,
                             ctx.channel.id,
@@ -85,8 +85,8 @@ class Announcement:
             for sub in subscribers:
                 try:
                     await sub.send(f'**#hot** news: {self.data.content}')
-                except:
-                    pass
+                except Exception as e:
+                    print(e)
 
     def __str__(self):
         minutes = self.data.sleep / 60

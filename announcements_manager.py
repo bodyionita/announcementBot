@@ -20,10 +20,16 @@ class AnnouncementsManager:
         self.__announcements.pop(uuid)
 
     async def push_db_announcement(self, ann):
-        result = await self.annCollection.insert_one(ann.toJson())
+        try:
+            result = await self.annCollection.insert_one(ann.toJson())
+        except Exception as e:
+            print(e)
 
-    async def remove_db_announcement(self, ann):
-        pass
+    async def remove_db_announcement(self, uuid):
+        try:
+            result = await self.annCollection.delete_many({'uuid': uuid})
+        except Exception as e:
+            print(e)
 
     async def update(self, seconds_passed, subscribers):
         expired_ids = []
@@ -37,7 +43,8 @@ class AnnouncementsManager:
     async def cancel(self, id: str, message):
         try:
             await self.remove(id)
-        except:
+        except Exception as e:
+            print(e)
             await message.reply(f'Announcement with that id was not found')
         finally:
             await message.reply(f'Cancelled announcement with id **{id}**')

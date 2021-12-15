@@ -132,7 +132,8 @@ async def on_message(message):
         msg = msg.replace('#hot', '')
         if message.reference is not None:
             msg = message.reference.resolved.content
-        await process_add(ctx, DEFAULT_REPETITIONS, DEFAULT_FREQUENCY, msg, AnnouncementType.Private)
+        if len(msg) > 0:
+            await process_add(ctx, DEFAULT_REPETITIONS, DEFAULT_FREQUENCY, msg, AnnouncementType.Private)
 
 
 @announce.command(description='Create a new announcement')
@@ -148,14 +149,13 @@ async def process_add(ctx, how_many: int, minutes_interval: float, content: str,
     final_content = content
     try:
         final_content = ctx.message.reference.resolved.content
-    except:
-        pass
-        # await error(ctx, f'Did not find the replied message to announce. '
-        #                  f'Make sure you "Reply" the message containing the announcement ')
-        # return  
+    except Exception as e:
+        print(e.with_traceback())
+
     if minutes_interval < 0.5:
-        await error(ctx, 'Frequency too low. It should be at least 30 seconds apart.')
+        # await error(ctx, 'Frequency too low. It should be at least 30 seconds apart.')
         # return
+        pass #todo
 
     try:
         annData = create_data(final_content, ctx, minutes_interval * 60, how_many, annType)
@@ -163,7 +163,7 @@ async def process_add(ctx, how_many: int, minutes_interval: float, content: str,
         await annManager.add(an)
 
     except Exception as e:
-        print(e)
+        print(e.with_traceback())
         await error(ctx)
         return
 

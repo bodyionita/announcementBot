@@ -15,10 +15,10 @@ class AnnouncementsManager:
     def remove(self, uuid: str):
         self.__announcements.pop(uuid)
 
-    async def update(self, seconds_passed):
+    async def update(self, seconds_passed, subscribers):
         expired_ids = []
         for id,an in self.__announcements.items():
-            await an.pass_time(seconds_passed)
+            await an.pass_time(seconds_passed, subscribers)
             if an.expired is True:
                 expired_ids.append(id)
         for id in expired_ids:

@@ -69,6 +69,7 @@ __Announcement Bot Help page__
 `$announce list` - lists current announcements
 
 `$announce subscribe` - susbcribe to the #hot announcements to receive private message when a moderator tags a message with #hot
+`$announce unsubscribe` - unsusbcribe from the #hot announcements
 
 `$announce add <how_many> <interval_in_minutes>  <content>` - adds new announcement
     where: 
@@ -247,7 +248,7 @@ async def announcements_loop():
     lastEntry = time_now
 
 
-@tasks.loop(seconds=30)  # task runs every 10 seconds
+@tasks.loop(seconds=300)  # task runs every 10 seconds
 async def config_get_loop():
     global DEFAULT_FREQUENCY
     global DEFAULT_REPETITIONS
